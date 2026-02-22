@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus | Comparador de Bases de Datos</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- SheetJS (XLSX) library -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <header class="header">
+            <div class="logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path
+                        d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                    </path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                <h1>Nexus Compare</h1>
+            </div>
+            <p class="subtitle">Compara dos bases de datos locales al instante y descubre qué ha cambiado.</p>
+        </header>
+
+        <main class="main-content">
+            <!-- Upload Section -->
+            <section class="upload-section glass-panel">
+                <div class="upload-grid">
+                    <!-- DB 1 -->
+                    <div class="upload-card" id="uploadCard1">
+                        <div class="card-header">
+                            <span class="badge">1</span>
+                            <h2>Base de Datos Inicial</h2>
+                        </div>
+                        <p class="card-desc">Sube la versión antigua o base.</p>
+
+                        <div class="dropzone" id="dropzone1">
+                            <input type="file" id="fileInput1" accept=".xlsx, .xls, .csv" hidden>
+                            <svg class="icon-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <p>Arrastra tu archivo aquí o <span class="text-primary">explora</span></p>
+                            <p class="file-name" id="fileName1"></p>
+                        </div>
+
+                        <!-- Opciones que aparecen al cargar DB 1 -->
+                        <div class="options-panel hidden" id="options1">
+                            <div class="input-group">
+                                <label for="sheetSelect1">Hoja:</label>
+                                <select id="sheetSelect1" class="glass-select"></select>
+                            </div>
+                            <div class="input-group">
+                                <label for="keySelect1">Llave Única:</label>
+                                <select id="keySelect1" class="glass-select"></select>
+                            </div>
+                            <p class="row-count" id="rowCount1">Filas: 0</p>
+                        </div>
+                    </div>
+
+                    <!-- DB 2 -->
+                    <div class="upload-card" id="uploadCard2">
+                        <div class="card-header">
+                            <span class="badge">2</span>
+                            <h2>Base de Datos Final</h2>
+                        </div>
+                        <p class="card-desc">Sube la versión nueva a comparar.</p>
+
+                        <div class="dropzone" id="dropzone2">
+                            <input type="file" id="fileInput2" accept=".xlsx, .xls, .csv" hidden>
+                            <svg class="icon-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <p>Arrastra tu archivo aquí o <span class="text-primary">explora</span></p>
+                            <p class="file-name" id="fileName2"></p>
+                        </div>
+
+                        <!-- Opciones que aparecen al cargar DB 2 -->
+                        <div class="options-panel hidden" id="options2">
+                            <div class="input-group">
+                                <label for="sheetSelect2">Hoja:</label>
+                                <select id="sheetSelect2" class="glass-select"></select>
+                            </div>
+                            <div class="input-group">
+                                <label for="keySelect2">Llave Única:</label>
+                                <select id="keySelect2" class="glass-select"></select>
+                            </div>
+                            <p class="row-count" id="rowCount2">Filas: 0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="action-bar">
+                    <button class="btn btn-primary btn-large" id="btnCompare" disabled>
+                        <span>Comparar Bases de Datos</span>
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </button>
+                    <button class="btn btn-large" id="btnReset"
+                        style="margin-left: 1rem; background: rgba(255,255,255,0.05); color: var(--text-main); border: 1px solid var(--glass-border);">
+                        <span>Nueva Consulta</span>
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                            <path d="M3 3v5h5"></path>
+                        </svg>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section class="results-section hidden" id="resultsSection">
+                <div class="summary-cards">
+                    <div class="summary-card stat-added" id="cardAdded">
+                        <div class="stat-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg></div>
+                        <div class="stat-info">
+                            <h3>Incluidos</h3>
+                            <p class="stat-number" id="countAdded">0</p>
+                            <p class="stat-desc">Nuevos registros en BD 2</p>
+                        </div>
+                    </div>
+
+                    <div class="summary-card stat-removed" id="cardRemoved">
+                        <div class="stat-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg></div>
+                        <div class="stat-info">
+                            <h3>Excluidos</h3>
+                            <p class="stat-number" id="countRemoved">0</p>
+                            <p class="stat-desc">Registros que ya no están</p>
+                        </div>
+                    </div>
+
+                    <div class="summary-card stat-modified" id="cardModified">
+                        <div class="stat-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg></div>
+                        <div class="stat-info">
+                            <h3>Modificados</h3>
+                            <p class="stat-number" id="countModified">0</p>
+                            <p class="stat-desc">Registros con cambios en columnas</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="results-panel glass-panel">
+                    <div class="results-header">
+                        <div class="tabs">
+                            <button class="tab-btn active" data-target="tab-added">Incluidos</button>
+                            <button class="tab-btn" data-target="tab-removed">Excluidos</button>
+                            <button class="tab-btn" data-target="tab-modified">Modificados</button>
+                        </div>
+                        <div class="search-container">
+                            <svg class="search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            <input type="text" id="searchInput" class="glass-input"
+                                placeholder="Buscar / Filtrar resultados...">
+                            <button id="btnExport" class="btn btn-primary"
+                                style="margin-left: 1rem; padding: 0.6rem 1rem;">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                    style="margin-right: 8px;">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
+                                Exportar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="tab-content">
+                        <!-- Tab Añadidos -->
+                        <div class="tab-pane active" id="tab-added">
+                            <div class="table-container">
+                                <table id="tableAdded" class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>No hay datos</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Tab Eliminados -->
+                        <div class="tab-pane hidden" id="tab-removed">
+                            <div class="table-container">
+                                <table id="tableRemoved" class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>No hay datos</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Tab Modificados -->
+                        <div class="tab-pane hidden" id="tab-modified">
+                            <div class="table-container">
+                                <table id="tableModified" class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>No hay datos</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>Procesamiento 100% local en tu navegador. Ningún dato se envía a la nube.</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
