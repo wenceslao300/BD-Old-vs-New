@@ -4,13 +4,13 @@ const state = {
         file: null,
         workbook: null,
         data: [], // Selected sheet data
-        key: null // Selected key
+        keys: [] // Selected keys
     },
     db2: {
         file: null,
         workbook: null,
         data: [],
-        key: null
+        keys: []
     },
     results: {
         added: [],
@@ -25,7 +25,8 @@ const fileInput1 = document.getElementById('fileInput1');
 const fileName1 = document.getElementById('fileName1');
 const options1 = document.getElementById('options1');
 const sheetSelect1 = document.getElementById('sheetSelect1');
-const keySelect1 = document.getElementById('keySelect1');
+const keysContainer1 = document.getElementById('keysContainer1');
+const btnAddKey1 = document.getElementById('btnAddKey1');
 const rowCount1 = document.getElementById('rowCount1');
 
 const dropzone2 = document.getElementById('dropzone2');
@@ -33,7 +34,8 @@ const fileInput2 = document.getElementById('fileInput2');
 const fileName2 = document.getElementById('fileName2');
 const options2 = document.getElementById('options2');
 const sheetSelect2 = document.getElementById('sheetSelect2');
-const keySelect2 = document.getElementById('keySelect2');
+const keysContainer2 = document.getElementById('keysContainer2');
+const btnAddKey2 = document.getElementById('btnAddKey2');
 const rowCount2 = document.getElementById('rowCount2');
 
 const btnCompare = document.getElementById('btnCompare');
@@ -51,8 +53,8 @@ document.addEventListener('DOMContentLoaded', () => {
     sheetSelect1.addEventListener('change', (e) => loadSheetData(1, e.target.value));
     sheetSelect2.addEventListener('change', (e) => loadSheetData(2, e.target.value));
 
-    keySelect1.addEventListener('change', (e) => { state.db1.key = e.target.value; checkReady(); });
-    keySelect2.addEventListener('change', (e) => { state.db2.key = e.target.value; checkReady(); });
+    btnAddKey1.addEventListener('click', () => addKeySelect(1));
+    btnAddKey2.addEventListener('click', () => addKeySelect(2));
 
     btnCompare.addEventListener('click', performComparison);
 
@@ -167,7 +169,6 @@ function handleFile(file, index) {
 
 function loadSheetData(index, sheetName) {
     const targetState = index === 1 ? state.db1 : state.db2;
-    const keySelectEl = index === 1 ? keySelect1 : keySelect2;
     const rowCountEl = index === 1 ? rowCount1 : rowCount2;
 
     const worksheet = targetState.workbook.Sheets[sheetName];
@@ -177,42 +178,112 @@ function loadSheetData(index, sheetName) {
     rowCountEl.textContent = `Filas: ${jsonData.length}`;
 
     // Extract column headers
+    const container = index === 1 ? keysContainer1 : keysContainer2;
+    const btnAdd = index === 1 ? btnAddKey1 : btnAddKey2;
+    container.innerHTML = '';
+
     if (jsonData.length > 0) {
         const columns = Object.keys(jsonData[0]);
-        keySelectEl.innerHTML = '';
+        targetState.keys = [columns[0]];
+
+        const firstSelect = document.createElement('select');
+        firstSelect.className = 'glass-select key-select';
+        firstSelect.dataset.idx = 0;
+
         columns.forEach(col => {
             const option = document.createElement('option');
             option.value = col;
             option.textContent = col;
-            keySelectEl.appendChild(option);
+            firstSelect.appendChild(option);
         });
-        targetState.key = columns[0]; // Set default key
+
+        firstSelect.addEventListener('change', () => updateKeysState(index));
+        container.appendChild(firstSelect);
+
+        btnAdd.classList.remove('hidden');
     } else {
-        keySelectEl.innerHTML = '<option value="">No hay datos</option>';
-        targetState.key = null;
+        const emptySelect = document.createElement('select');
+        emptySelect.className = 'glass-select key-select';
+        emptySelect.innerHTML = '<option value="">No hay datos</option>';
+        container.appendChild(emptySelect);
+        targetState.keys = [];
+        btnAdd.classList.add('hidden');
     }
 
-    // Try to auto-match keys intelligently if both are loaded
-    if (index === 2 && state.db1.key && targetState.data.length > 0) {
-        const columns = Object.keys(jsonData[0]);
-        if (columns.includes(state.db1.key)) {
-            keySelectEl.value = state.db1.key;
-            targetState.key = state.db1.key;
+    checkAddButtonVisibility(index);
+
+    // Try to auto-match first key if possible
+    if (targetState.keys.length > 0) {
+        const otherState = index === 1 ? state.db2 : state.db1;
+        if (otherState.keys.length > 0 && otherState.data.length > 0) {
+            const columns = Object.keys(jsonData[0]);
+            if (columns.includes(otherState.keys[0])) {
+                container.querySelector('select').value = otherState.keys[0];
+                targetState.keys[0] = otherState.keys[0];
+            }
         }
     }
-    if (index === 1 && state.db2.key && targetState.data.length > 0) {
-        const columns = Object.keys(jsonData[0]);
-        if (columns.includes(state.db2.key)) {
-            keySelectEl.value = state.db2.key;
-            targetState.key = state.db2.key;
-        }
-    }
+
+    updateKeysState(index);
+}
+
+function addKeySelect(index) {
+    const container = index === 1 ? keysContainer1 : keysContainer2;
+    const selects = container.querySelectorAll('select');
+    if (selects.length >= 5) return;
+
+    const targetState = index === 1 ? state.db1 : state.db2;
+    const columns = targetState.data.length > 0 ? Object.keys(targetState.data[0]) : [];
+
+    const newSelect = document.createElement('select');
+    newSelect.className = 'glass-select key-select';
+    newSelect.dataset.idx = selects.length;
+
+    // Default to empty option for subsequent keys
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = "";
+    defaultOpt.textContent = "-- Seleccionar llave extra --";
+    newSelect.appendChild(defaultOpt);
+
+    columns.forEach(col => {
+        const option = document.createElement('option');
+        option.value = col;
+        option.textContent = col;
+        newSelect.appendChild(option);
+    });
+
+    newSelect.addEventListener('change', () => updateKeysState(index));
+    container.appendChild(newSelect);
+
+    updateKeysState(index);
+    checkAddButtonVisibility(index);
+}
+
+function updateKeysState(index) {
+    const container = index === 1 ? keysContainer1 : keysContainer2;
+    const selects = container.querySelectorAll('select');
+    const keys = Array.from(selects).map(s => s.value).filter(v => v !== ""); // filter out empty
+
+    if (index === 1) state.db1.keys = keys;
+    else state.db2.keys = keys;
 
     checkReady();
 }
 
+function checkAddButtonVisibility(index) {
+    const container = index === 1 ? keysContainer1 : keysContainer2;
+    const btn = index === 1 ? btnAddKey1 : btnAddKey2;
+    if (container.querySelectorAll('select').length >= 5) {
+        btn.classList.add('hidden');
+    } else if (container.querySelectorAll('select').length > 0 && container.querySelector('select').value !== "") {
+        btn.classList.remove('hidden');
+    }
+}
+
 function checkReady() {
-    if (state.db1.data.length > 0 && state.db2.data.length > 0 && state.db1.key && state.db2.key) {
+    if (state.db1.data.length > 0 && state.db2.data.length > 0 &&
+        state.db1.keys.length > 0 && state.db2.keys.length > 0 &&
+        state.db1.keys.length === state.db2.keys.length) {
         btnCompare.disabled = false;
         btnCompare.classList.add('pulse-anim');
         setTimeout(() => btnCompare.classList.remove('pulse-anim'), 1000);
@@ -246,25 +317,28 @@ function filterTables(e) {
 
 // Compare Engine
 function performComparison() {
-    const key1 = state.db1.key;
-    const key2 = state.db2.key;
+    const keys1 = state.db1.keys;
+    const keys2 = state.db2.keys;
     const data1 = state.db1.data;
     const data2 = state.db2.data;
+
+    const getCompositeKey1 = (row) => keys1.map(k => String(row[k] || '').trim()).join(' | ');
+    const getCompositeKey2 = (row) => keys2.map(k => String(row[k] || '').trim()).join(' | ');
 
     // Index arrays by key for O(1) lookups
     const map1 = new Map();
     data1.forEach(row => {
-        let keyValue = row[key1];
-        if (keyValue !== undefined && keyValue !== null && keyValue !== '') {
-            map1.set(String(keyValue).trim(), row);
+        let keyValue = getCompositeKey1(row);
+        if (keyValue !== '') {
+            map1.set(keyValue, row);
         }
     });
 
     const map2 = new Map();
     data2.forEach(row => {
-        let keyValue = row[key2];
-        if (keyValue !== undefined && keyValue !== null && keyValue !== '') {
-            map2.set(String(keyValue).trim(), row);
+        let keyValue = getCompositeKey2(row);
+        if (keyValue !== '') {
+            map2.set(keyValue, row);
         }
     });
 
@@ -282,8 +356,12 @@ function performComparison() {
             const differences = {};
             let isModified = false;
 
-            // We check only common columns (same name)
-            const commonCols = Object.keys(row1).filter(col => Object.keys(row2).includes(col) && col !== key1 && col !== key2);
+            // We check only common columns (same name) ignoring all keys
+            const commonCols = Object.keys(row1).filter(col =>
+                Object.keys(row2).includes(col) &&
+                !keys1.includes(col) &&
+                !keys2.includes(col)
+            );
 
             commonCols.forEach(col => {
                 const val1 = String(row1[col] || '');
@@ -334,9 +412,9 @@ function renderResults() {
     document.getElementById('countModified').textContent = state.results.modified.length;
 
     // Render tables
-    renderSimpleTable('tableAdded', state.results.added, state.db2.key);
-    renderSimpleTable('tableRemoved', state.results.removed, state.db1.key);
-    renderModifiedTable('tableModified', state.results.modified, state.db1.key, state.db2.key);
+    renderSimpleTable('tableAdded', state.results.added, state.db2.keys.join(' | '));
+    renderSimpleTable('tableRemoved', state.results.removed, state.db1.keys.join(' | '));
+    renderModifiedTable('tableModified', state.results.modified, state.db1.keys.join(' | '), state.db2.keys.join(' | '));
 }
 
 function renderSimpleTable(tableId, dataArray, primaryKey) {
@@ -457,8 +535,8 @@ function exportToExcel() {
 
     // 3. Modificados (Agrupados por tipo de modificación en pestañas separadas)
     if (state.results.modified.length > 0) {
-        const keyName1 = state.db1.key;
-        const keyName2 = state.db2.key;
+        const keyName1 = state.db1.keys.join(' | ');
+        const keyName2 = state.db2.keys.join(' | ');
 
         // Group by diffGroup
         const groups = {};
@@ -512,8 +590,8 @@ function exportToExcel() {
 
 function resetApp() {
     // Reset state
-    state.db1 = { file: null, workbook: null, data: [], key: null };
-    state.db2 = { file: null, workbook: null, data: [], key: null };
+    state.db1 = { file: null, workbook: null, data: [], keys: [] };
+    state.db2 = { file: null, workbook: null, data: [], keys: [] };
     state.results = { added: [], removed: [], modified: [] };
 
     // Reset inputs
@@ -525,7 +603,8 @@ function resetApp() {
     fileName1.title = '';
     options1.classList.add('hidden');
     sheetSelect1.innerHTML = '';
-    keySelect1.innerHTML = '';
+    keysContainer1.innerHTML = '';
+    btnAddKey1.classList.add('hidden');
     rowCount1.textContent = 'Filas: 0';
 
     // Reset UI for DB2
@@ -533,7 +612,8 @@ function resetApp() {
     fileName2.title = '';
     options2.classList.add('hidden');
     sheetSelect2.innerHTML = '';
-    keySelect2.innerHTML = '';
+    keysContainer2.innerHTML = '';
+    btnAddKey2.classList.add('hidden');
     rowCount2.textContent = 'Filas: 0';
 
     // Hide results
